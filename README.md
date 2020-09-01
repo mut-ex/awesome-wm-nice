@@ -121,6 +121,23 @@ nice = {
 
 
 
+## Using
+
+nice will automatically detect and change the window decoration color to match the client. However...
+
+* If nice doesn't pick the right color or you want to specify it yourself, right-click the titlebar and select 'Manually Pick Color'
+* If the client theme changes (for example if you change your terminal emulator colors), to update the window decoration colors, right-click on the titlebar and select 'Redo Window Decorations'
+* Scroll-up with your mouse over the titlebar to "roll-up" the window shade. Scroll-down over the titlebar, or left-click to "roll-down" the window shade
+* nice saves its color rules in the color_rules file within the module directory. If you wish you can manually edit it, or delete the file if you want to start again.
+
+
+
+## Issues
+
+If you face any bugs or issues (or have a feature request), please feel free to open an issue on here
+
+
+
 ## License
 
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org)

@@ -164,8 +164,8 @@ end
 -- Determines the dominant color of the client's top region
 local function get_dominant_color(client)
     local color
-    gsurface(client.content):write_to_png(
-        "/home/mutex/nice/" .. client.class .. "_" .. client.instance .. ".png")
+    -- gsurface(client.content):write_to_png(
+    --     "/home/mutex/nice/" .. client.class .. "_" .. client.instance .. ".png")
     local pb
     local bytes
     local tally = {}
