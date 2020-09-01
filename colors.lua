@@ -7,7 +7,6 @@ local max = math.max
 local min = math.min
 local pow = math.pow
 local random = math.random
-local debug = require("helpers").debug
 
 -- Returns a value that is clipped to interval edges if it falls outside the interval
 local function clip(num, min_num, max_num) return
