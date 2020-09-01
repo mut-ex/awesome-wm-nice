@@ -52,6 +52,12 @@ $ git clone https://github.com/mut-ex/awesome-wm-nice.git nice
 
 ## Usage
 
+First of all, make sure that you do not already have code in place that requests for the default titlebars. Something like this
+
+```lua
+client.connect_signal("request::titlebars", function(c) ... end)
+```
+
 To use nice, you first need to load the module. You can do so by placing the following line right after `beautiful.init(...)`
 
 ```lua
@@ -64,6 +70,21 @@ If you are fine using the default configuration, you are all done! However if yo
 ```lua
 local nice = require("nice")
 nice = {
+  --[[
+    For parameters that take a table, you only need to pass the
+    values you intend to change.
+    
+    For example:
+    
+    titlebar_items = {
+      left = {"close"}
+    }
+
+    tooltip_messages = {
+      close = "Destroy this client!"
+    }
+  ]]
+
   -- * == Titlebar specific == *
   -- titlebar_color = "#1E1E24"
   -- titlebar_height = 38
@@ -141,6 +162,3 @@ If you face any bugs or issues (or have a feature request), please feel free to 
 ## License
 
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org)
-
-
-
