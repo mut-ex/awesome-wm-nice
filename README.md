@@ -14,9 +14,9 @@ nice is an easy to use, highly configurable extension for **[Awesome WM](https:/
 
 ### Prerequisites 
 
-* You need to be using **[Awesome WM](https://awesomewm.org/)** as your window manager, and should already have a working basic configuration file. I have developed and tested nice only on **awesome v4.3 git version**
+* You need to be using **[Awesome WM](https://awesomewm.org/)** as your window manager. Currently nice only works with **awesome v4.3 git version**. I am working on support for the stable release.
 
-* I **highly** suggest using a compositor such as **[picom](https://github.com/yshui/picom)**. My recommended shadow settings are given below
+* I **highly** recommend using a compositor such as **[picom](https://github.com/yshui/picom)**. My recommended shadow settings are given below
 
   ```
   shadow = true;
@@ -155,7 +155,10 @@ nice will automatically detect and change the window decoration color to match t
 
 ## Issues
 
-If you face any bugs or issues (or have a feature request), please feel free to open an issue on here
+If you face any bugs or issues (or have a feature request), please feel free to open an issue.
+
+### Known Issues
+  * Error: `Typelib file for namespace 'Gdk' (any version) not found` on NixOS. [Recommended fix can be found here](https://github.com/mut-ex/awesome-wm-nice/issues/1#issuecomment-684427129)
 
 
 
