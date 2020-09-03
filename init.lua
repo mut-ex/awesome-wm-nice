@@ -451,8 +451,9 @@ local function create_titlebar_title(c)
         opacity = c.active and 1 or title_unfocused_opacity,
         valign = "center",
         widget = textbox,
-
     }
+
+    local titlebar_font = _private.titlebar_font or "IBM Plex Sans 11"
     local function update()
         local text_color = is_contrast_acceptable(
                                title_color_light, client_color) and
@@ -460,8 +461,9 @@ local function create_titlebar_title(c)
 
         title_widget.markup =
             ("<span foreground='%s' font='%s'>%s</span>"):format(
-                text_color, _private.titlebar_font or "IBM Plex Sans 11", c.name)
+                text_color, titlebar_font, c.name)
     end
+
     c:connect_signal("property::name", update)
     -- c:connect_signal("property::_nice_color", update)
     c:connect_signal(
@@ -470,7 +472,18 @@ local function create_titlebar_title(c)
         end)
     c:connect_signal("focus", function() title_widget.opacity = 1 end)
     update()
-    return {title_widget, widget = wcontainer.margin, left = 4, right = 4}
+
+    local titlebar_font_size = tonumber(titlebar_font:gsub('[^0-9]', ''))
+    local verticalMargin = (_private.titlebar_height - titlebar_font_size) / 2
+
+    return {
+        title_widget,
+        widget = wcontainer.margin,
+        left = 4,
+        right = 4,
+        top = verticalMargin,
+        bottom = verticalMargin,
+    }
 end
 
 -- Creates titlebar items for a given group of item names
