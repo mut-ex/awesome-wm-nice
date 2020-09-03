@@ -1,9 +1,13 @@
-----
 -- ============================================================
+local ret, helpers = pcall(require, "helpers")
+local debug = ret and helpers.debug or function() end
+
+local ipairs = ipairs
 -- > Awesome WM LIBS
 local awful = require("awful")
 local atooltip = awful.tooltip
 local wibox = require("wibox")
+local get_font_height = require("beautiful").get_font_height
 -- Widgets
 local imagebox = wibox.widget.imagebox
 local textbox = wibox.widget.textbox
@@ -14,38 +18,40 @@ local wlayout_fixed_horizontal = wlayout.fixed.horizontal
 -- Containers
 local wcontainer = wibox.container
 local wcontainer_background = wcontainer.background
-local wcontainer_place = wcontainer.place
 local wcontainer_constraint = wcontainer.constraint
+local wcontainer_margin = wcontainer.margin
+local wcontainer_place = wcontainer.place
 -- Gears
 local gsurface = require("gears.surface")
 local gtimer = require("gears.timer")
 local gtimer_weak_start_new = gtimer.weak_start_new
--- > MATH LIBS
+-- > Math
 local math = math
 local max = math.max
 local abs = math.abs
 local rad = math.rad
 local floor = math.floor
--- > LGI LIBS
+-- > LGI
 local lgi = require("lgi")
 local cairo = lgi.cairo
 local gdk = lgi.Gdk
-local pixbuf_get_from_window = gdk.pixbuf_get_from_window
 local get_default_root_window = gdk.get_default_root_window
 local pixbuf_get_from_surface = gdk.pixbuf_get_from_surface
+local pixbuf_get_from_window = gdk.pixbuf_get_from_window
 -- > NICE LIBS
 -- Colors
 local colors = require("nice.colors")
-local color_lighten = colors.lighten
 local color_darken = colors.darken
+local color_lighten = colors.lighten
 local is_contrast_acceptable = colors.is_contrast_acceptable
 local relative_luminance = colors.relative_luminance
 -- Shapes
 local shapes = require("nice.shapes")
 local create_corner_top_left = shapes.create_corner_top_left
-local create_edge_top_middle = shapes.create_edge_top_middle
 local create_edge_left = shapes.create_edge_left
+local create_edge_top_middle = shapes.create_edge_top_middle
 local gradient = shapes.duotone_gradient_vertical
+
 gdk.init({})
 
 -- => Local settings
@@ -66,7 +72,13 @@ local function rel_lighten(lum) return lum * 90 + 10 end
 local function rel_darken(lum) return -(lum * 70) + 100 end
 -- ------------------------------------------------------------
 
-local nice = {}
+local nice = {
+    MB_LEFT = 1,
+    MB_MIDDLE = 2,
+    MB_RIGHT = 3,
+    MB_SCROLL_UP = 4,
+    MB_SCROLL_DOWN = 5,
+}
 
 -- => Defaults
 -- ============================================================
@@ -75,41 +87,52 @@ _private.max_width = 0
 _private.max_height = 0
 
 -- Titlebar
-_private.titlebar_color = "#1E1E24"
 _private.titlebar_height = 38
 _private.titlebar_radius = 9
+_private.titlebar_color = "#1E1E24"
 _private.titlebar_margin_left = 0
 _private.titlebar_margin_right = 0
-_private.titlebar_font = "Inter Regular 10"
+_private.titlebar_font = "Sans 11"
 _private.titlebar_items = {
     left = {"close", "minimize", "maximize"},
-    middle = {"title"},
+    middle = "title",
     right = {"sticky", "ontop", "floating"},
 }
 _private.context_menu_theme = {
-    bg_normal = "#5e6472",
-    fg_normal = "#fefefa",
     bg_focus = "#aed9e0",
-    fg_focus = "#242424",
+    bg_normal = "#5e6472",
     border_color = "#00000000",
     border_width = 0,
-    height = 35,
+    fg_focus = "#242424",
+    fg_normal = "#fefefa",
+    font = "Sans 11",
+    height = 27.5,
     width = 250,
-    font = "Inter Regular 10",
 }
-_private.window_shade_enabled = true
--- Button
-_private.button_margin_horizontal = 5
-_private.button_margin_top = 2
+_private.win_shade_enabled = true
+_private.no_titlebar_maximized = false
+_private.mb_move = nice.MB_LEFT
+_private.mb_contextmenu = nice.MB_MIDDLE
+_private.mb_resize = nice.MB_RIGHT
+_private.mb_win_shade_rollup = nice.MB_SCROLL_UP
+_private.mb_win_shade_rolldown = nice.MB_SCROLL_DOWN
+
+-- Titlebar Items
 _private.button_size = 16
+_private.button_margin_horizontal = 5
+-- _private.button_margin_vertical
+_private.button_margin_top = 2
+-- _private.button_margin_bottom = 0
+-- _private.button_margin_left = 0
+-- _private.button_margin_right = 0
 _private.tooltips_enabled = true
 _private.tooltip_messages = {
     close = "close",
     minimize = "minimize",
-    floating_active = "enable tiling mode",
-    floating_inactive = "enable floating mode",
     maximize_active = "unmaximize",
     maximize_inactive = "maximize",
+    floating_active = "enable tiling mode",
+    floating_inactive = "enable floating mode",
     ontop_active = "don't keep above other windows",
     ontop_inactive = "keep above other windows",
     sticky_active = "disable sticky mode",
@@ -310,7 +333,7 @@ local function create_titlebar_button(c, name, button_callback, property)
         end)
     -- The button is updated on both click and release, but the call back is executed on release
     button_img.buttons = awful.button(
-                             {}, awful.button.names.LEFT, function()
+                             {}, nice.MB_LEFT, function()
             event = "press"
             update()
         end, function()
@@ -322,13 +345,12 @@ local function create_titlebar_button(c, name, button_callback, property)
             end
             update()
         end)
-    local margin = _private.button_spacing
     button_img.id = "button_image"
     update()
     return wibox.widget {
         widget = wcontainer_place,
         {
-            widget = wcontainer.margin,
+            widget = wcontainer_margin,
             top = _private.button_margin_top or _private.button_margin_vertical or
                 _private.button_margin,
             bottom = _private.button_margin_bottom or
@@ -348,8 +370,7 @@ local function create_titlebar_button(c, name, button_callback, property)
     }
 end
 
--- Creates a client title widget
-local function create_titlebar_title(c)
+local function get_titlebar_mouse_bindings(c)
     local client_color = c._nice_base_color
     local shade_enabled = _private.window_shade_enabled
     -- Add functionality for double click to (un)maximize, and single click and hold to move
@@ -357,7 +378,7 @@ local function create_titlebar_title(c)
     local tolerance = double_click_jitter_tolerance
     local buttons = {
         awful.button(
-            {}, awful.button.names.LEFT, function()
+            {}, _private.mb_move, function()
                 local cx, cy = _G.mouse.coords().x, _G.mouse.coords().y
                 local delta = double_click_time_window_ms / 1000
                 clicks = clicks + 1
@@ -381,14 +402,13 @@ local function create_titlebar_title(c)
                     delta, function() clicks = 0 end)
             end),
         awful.button(
-            {}, awful.button.names.RIGHT, function()
+            {}, _private.mb_contextmenu, function()
 
                 local menu_items = {}
                 local function add_item(text, callback)
-                    -- right_click_menu(right_click_menu, {text, callback})
                     menu_items[#menu_items + 1] = {text, callback}
                 end
-                -- TODO: Add client control options as menu enteries for options that haven't had their buttons added
+                -- TODO: Add client control options as menu entries for options that haven't had their buttons added
                 add_item(
                     "Redo Window Decorations", function()
                         c._nice_base_color = get_dominant_color(c)
@@ -409,14 +429,6 @@ local function create_titlebar_title(c)
                                 return true
                             end, "crosshair")
                     end)
-                -- if c._nice_window_shade then
-                --     local win_shade = c._nice_window_shade
-                --     add_item(
-                --         not win_shade.visible and "Roll Up" or "Roll Down",
-                --         function()
-                --             _private.shade_toggle(c)
-                --         end)
-                -- end
                 add_item("Nevermind...", function() end)
                 if c._nice_right_click_menu then
                     c._nice_right_click_menu:hide()
@@ -428,90 +440,107 @@ local function create_titlebar_title(c)
                     }
                 c._nice_right_click_menu:show()
             end),
+        awful.button(
+            {}, _private.mb_resize, function()
+                c:activate{context = "mouse_click", action = "mouse_resize"}
+            end),
     }
 
     if _private.window_shade_enabled then
         buttons[#buttons + 1] = awful.button(
-                                    {}, awful.button.names.SCROLL_UP,
+                                    {}, _private.mb_win_shade_rollup,
                                     function()
                 _private.shade_roll_up(c)
             end)
         buttons[#buttons + 1] = awful.button(
-                                    {}, awful.button.names.SCROLL_DOWN,
+                                    {}, _private.mb_win_shade_rolldown,
                                     function()
                 _private.shade_roll_down(c)
             end)
     end
+    return buttons
+end
+
+-- Returns a titlebar widget for the given client
+local function create_titlebar_title(c)
+    local client_color = c._nice_base_color
 
     local title_widget = wibox.widget {
         align = "center",
-        buttons = buttons,
         ellipsize = "middle",
-        font = _private.titlebar_font,
         opacity = c.active and 1 or title_unfocused_opacity,
         valign = "center",
         widget = textbox,
-
     }
+
     local function update()
         local text_color = is_contrast_acceptable(
                                title_color_light, client_color) and
                                title_color_light or title_color_dark
-
         title_widget.markup =
             ("<span foreground='%s' font='%s'>%s</span>"):format(
-                text_color, _private.titlebar_font or "IBM Plex Sans 11", c.name)
+                text_color, _private.titlebar_font, c.name)
     end
     c:connect_signal("property::name", update)
-    -- c:connect_signal("property::_nice_color", update)
     c:connect_signal(
         "unfocus", function()
             title_widget.opacity = title_unfocused_opacity
         end)
     c:connect_signal("focus", function() title_widget.opacity = 1 end)
     update()
-    return {title_widget, widget = wcontainer.margin, left = 4, right = 4}
+    local titlebar_font_height = get_font_height(_private.titlebar_font)
+    local leftover_space = _private.titlebar_height - titlebar_font_height
+    local margin_vertical = leftover_space > 1 and leftover_space / 2 or 0
+    return {
+        title_widget,
+        widget = wibox.container.margin,
+        top = margin_vertical,
+        bottom = margin_vertical,
+    }
+end
+
+-- Returns a titlebar item
+local function get_titlebar_item(c, name)
+    if name == "close" then
+        return create_titlebar_button(c, name, function() c:kill() end)
+    elseif name == "maximize" then
+        return create_titlebar_button(
+                   c, name, function() c.maximized = not c.maximized end,
+                   "maximized")
+    elseif name == "minimize" then
+        return create_titlebar_button(
+                   c, name, function() c.minimized = true end)
+    elseif name == "ontop" then
+        return create_titlebar_button(
+                   c, name, function() c.ontop = not c.ontop end, "ontop")
+    elseif name == "floating" then
+        return create_titlebar_button(
+                   c, name, function()
+                c.floating = not c.floating
+                if c.floating then c.maximized = false end
+            end, "floating")
+    elseif name == "sticky" then
+        return create_titlebar_button(
+                   c, name, function()
+                c.sticky = not c.sticky
+                return c.sticky
+            end, "sticky")
+    elseif name == "title" then
+        return create_titlebar_title(c)
+    end
 end
 
 -- Creates titlebar items for a given group of item names
 local function create_titlebar_items(c, group)
     if not group then return nil end
+    if type(group) == "string" then return get_titlebar_item(c, group) end
     local titlebar_group_items = wibox.widget {
         layout = wlayout_fixed_horizontal,
     }
     local item
     for _, name in ipairs(group) do
-        if name == "close" then
-            item = create_titlebar_button(
-                       c, name, function() c:kill() end)
-        elseif name == "maximize" then
-            item = create_titlebar_button(
-                       c, name, function()
-                    c.maximized = not c.maximized
-                end, "maximized")
-        elseif name == "minimize" then
-            item = create_titlebar_button(
-                       c, name, function() c.minimized = true end)
-        elseif name == "ontop" then
-            item = create_titlebar_button(
-                       c, name, function() c.ontop = not c.ontop end, "ontop")
-        elseif name == "floating" then
-            item = create_titlebar_button(
-                       c, name, function()
-                    c.floating = not c.floating
-                    if c.floating then c.maximized = false end
-                end, "floating")
-        elseif name == "sticky" then
-            item = create_titlebar_button(
-                       c, name, function()
-                    c.sticky = not c.sticky
-                    return c.sticky
-                end, "sticky")
-        elseif name == "title" then
-            item = create_titlebar_title(c)
-        end
-        if #group == 1 then return item end
-        titlebar_group_items:add(item)
+        item = get_titlebar_item(c, name)
+        if item then titlebar_group_items:add(item) end
     end
     return titlebar_group_items
 end
@@ -528,18 +557,14 @@ local function add_window_shade(c, src_top, src_bottom)
     w.height = _private.titlebar_height + 3
     w.ontop = true
     w.visible = false
-    w.shape=  shapes.rounded_rect {
-        tl = _private.titlebar_radius+1,
-        tr = _private.titlebar_radius+1,
+    w.shape = shapes.rounded_rect {
+        tl = _private.titlebar_radius + 1,
+        tr = _private.titlebar_radius + 1,
         bl = 4,
         br = 4,
     }
     w.widget = wibox.widget {
-        {
-            src_top,
-            src_bottom,
-            layout = wlayout.fixed.vertical,
-        },
+        {src_top, src_bottom, layout = wlayout.fixed.vertical},
         widget = wcontainer_background,
         bg = "transparent",
     }
@@ -549,15 +574,14 @@ local function add_window_shade(c, src_top, src_bottom)
                 c._nice_window_shade.visible = false
                 c._nice_window_shade = nil
             end
-            collectgarbage()
-            collectgarbage()
+
         end)
     c._nice_window_shade = w
 end
 
 -- Shows the window contents
 function _private.shade_roll_down(c)
-    c.minimized = false
+    c:activate()
     c._nice_window_shade.visible = false
 end
 
@@ -606,14 +630,12 @@ function _private.add_window_decorations(c)
                                                   stroke_inner_bottom_lighten_mul)
     -- Outer strokes
     local stroke_color_outer_top = darken(
-
                                        darken_amount *
                                            stroke_outer_top_darken_mul)
     local stroke_color_outer_sides = darken(darken_amount)
     local stroke_color_outer_bottom = darken(darken_amount)
     local titlebar_height = _private.titlebar_height
     local background_fill_top = gradient(
-
                                     lighten(titlebar_gradient_c1_lighten),
                                     client_color, titlebar_height, 0,
                                     titlebar_gradient_c2_offset)
@@ -652,19 +674,23 @@ function _private.add_window_decorations(c)
     local titlebar = awful.titlebar(
                          c, {size = titlebar_height, bg = "transparent"})
     -- Arrange the graphics
-    titlebar.widget = {
+    titlebar:setup{
         imagebox(corner_top_left_img, false),
         {
             {
                 {
                     create_titlebar_items(c, _private.titlebar_items.left),
-                    widget = wcontainer.margin,
+                    widget = wcontainer_margin,
                     left = _private.titlebar_margin_left,
                 },
-                create_titlebar_items(c, _private.titlebar_items.middle),
+                {
+                    create_titlebar_items(c, _private.titlebar_items.middle),
+                    buttons = get_titlebar_mouse_bindings(c),
+                    layout = wibox.layout.flex.horizontal,
+                },
                 {
                     create_titlebar_items(c, _private.titlebar_items.right),
-                    widget = wcontainer.margin,
+                    widget = wcontainer_margin,
                     right = _private.titlebar_margin_right,
                 },
                 layout = wlayout_align_horizontal,
@@ -723,7 +749,6 @@ function _private.add_window_decorations(c)
         },
     }
     local corner_bottom_left_img = shapes.flip(
-
                                        create_corner_top_left {
             color = client_color,
             radius = bottom_edge_height,
@@ -770,9 +795,34 @@ function _private.add_window_decorations(c)
     if _private.window_shade_enabled then
         add_window_shade(c, titlebar.widget, bottom.widget)
     end
+
+    if _private.no_titlebar_maximized then
+        c:connect_signal(
+            "property::maximized", function()
+                if c.maximized then
+                    local curr_screen_geo = client.focus.screen.geometry
+                    awful.titlebar.hide(c)
+                    c.shape = nil
+                    c:geometry{
+                        x = 0,
+                        y = 0,
+                        width = curr_screen_geo.width,
+                        height = curr_screen_geo.height,
+                    }
+                else
+                    awful.titlebar.show(c)
+                    -- Shape the client
+                    c.shape = shapes.rounded_rect {
+                        tl = _private.titlebar_radius,
+                        tr = _private.titlebar_radius,
+                        bl = 4,
+                        br = 4,
+                    }
+                end
+            end)
+    end
     -- Clean up
-    collectgarbage()
-    collectgarbage()
+    collectgarbage("collect")
 end
 
 local function update_max_screen_dims()
@@ -784,9 +834,38 @@ local function update_max_screen_dims()
     _private.max_height = max_height * 1.5
     _private.max_width = max_width * 1.5
 end
---[[
-    
-]]
+
+local function validate_mb_bindings()
+    local action_mbs = {
+        "mb_move",
+        "mb_contextmenu",
+        "mb_resize",
+        "mb_win_shade_rollup",
+        "mb_win_shade_rolldown",
+    }
+    local mb_specified = {false, false, false, false, false}
+    local mb
+    local mb_conflict_test
+    for i, action_mb in ipairs(action_mbs) do
+        mb = _private[action_mb]
+        if mb then
+            assert(mb >= 1 and mb <= 5, "Invalid mouse button specified!")
+            mb_conflict_test = mb_specified[mb]
+            if not mb_conflict_test then
+                mb_specified[mb] = action_mb
+            else
+                error(
+
+                   
+                        ("%s and %s can not be bound to the same mouse button"):format(
+                            action_mb, mb_conflict_test))
+            end
+        else
+
+        end
+    end
+end
+
 function nice.initialize(args)
     update_max_screen_dims()
     _G.screen.connect_signal("list", update_max_screen_dims)
@@ -808,6 +887,8 @@ function nice.initialize(args)
             end
         end
     end
+
+    validate_mb_bindings()
 
     _G.client.connect_signal(
         "request::titlebars", function(c)
@@ -839,7 +920,7 @@ function nice.initialize(args)
                 c:connect_signal(
                     "request::activate", c._cb_add_window_decorations)
             end
-            -- Shape the client, unnecessary if there are no shadows under the clients. 
+            -- Shape the client
             c.shape = shapes.rounded_rect {
                 tl = _private.titlebar_radius,
                 tr = _private.titlebar_radius,

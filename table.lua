@@ -2,7 +2,7 @@
     Courtesy of: http://lua-users.org/wiki/SaveTableToFile
 ]] local function exportstring(s) return string.format("%q", s) end
 
--- // The Save Function
+--  The Save Function
 local function save(tbl, filename)
     local charS, charE = "   ", "\n"
     local file, err = io.open(filename, "wb")

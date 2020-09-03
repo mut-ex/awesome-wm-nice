@@ -7,27 +7,29 @@ local max = math.max
 local min = math.min
 local pow = math.pow
 local random = math.random
-local debug = require("helpers").debug
-
+-- local debug = require("helpers").debug
+local gcolor = require("gears.color")
+local parse_color = gcolor.parse_color
 -- Returns a value that is clipped to interval edges if it falls outside the interval
 local function clip(num, min_num, max_num) return
     max(min(num, max_num), min_num) end
 
 -- Converts the given hex color to normalized rgba
 local function hex2rgb(color)
-    color = color:gsub("#", "")
-    local strlen = color:len()
-    if strlen == 6 then
-        return tonumber("0x" .. color:sub(1, 2)) / 255,
-               tonumber("0x" .. color:sub(3, 4)) / 255,
-               tonumber("0x" .. color:sub(5, 6)) / 255, 1
-    end
-    if strlen == 8 then
-        return tonumber("0x" .. color:sub(1, 2)) / 255,
-               tonumber("0x" .. color:sub(3, 4)) / 255,
-               tonumber("0x" .. color:sub(5, 6)) / 255,
-               tonumber("0x" .. color:sub(7, 8)) / 255
-    end
+    -- color = color:gsub("#", "")
+    -- local strlen = color:len()
+    -- if strlen == 6 then
+    --     return tonumber("0x" .. color:sub(1, 2)) / 255,
+    --            tonumber("0x" .. color:sub(3, 4)) / 255,
+    --            tonumber("0x" .. color:sub(5, 6)) / 255, 1
+    -- end
+    -- if strlen == 8 then
+    --     return tonumber("0x" .. color:sub(1, 2)) / 255,
+    --            tonumber("0x" .. color:sub(3, 4)) / 255,
+    --            tonumber("0x" .. color:sub(5, 6)) / 255,
+    --            tonumber("0x" .. color:sub(7, 8)) / 255
+    -- end
+    return parse_color(color)
 end
 
 -- Converts the given hex color to hsv

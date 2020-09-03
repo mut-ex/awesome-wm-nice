@@ -10,6 +10,7 @@ local cairo = lgi.cairo
 local math = math
 local rad = math.rad
 local floor = math.floor
+local min = math.min
 
 -- Returns a shape function for a rounded rectangle with independently configurable corner radii
 local function rounded_rect(args)
@@ -41,8 +42,7 @@ local function circle_filled(color, size)
     -- cr:set_source_rgba(hex2rgb(darken(color, 25)))
     -- cr.line_width = 1
     -- cr:stroke()
-    collectgarbage()
-    collectgarbage()
+
     return surface
 end
 
@@ -55,6 +55,23 @@ local function duotone_gradient_vertical(color_1, color_2, height, offset_1,
     fill_pattern:add_color_stop_rgba(offset_1 or 0, r, g, b, a)
     r, g, b, a = hex2rgb(color_2)
     fill_pattern:add_color_stop_rgba(offset_2 or 1, r, g, b, a)
+    return fill_pattern
+end
+
+-- Returns a horizontal gradient pattern going from cololr_1 -> color_2
+local function duotone_gradient_horizontal(color, width)
+    local fill_pattern = cairo.Pattern.create_linear(0, 0, width, 0)
+    local r, g, b, a
+    r, g, b, a = hex2rgb(color)
+    fill_pattern:add_color_stop_rgba(0, r, g, b, a)
+    r, g, b, a = hex2rgb(color)
+    fill_pattern:add_color_stop_rgba(0.5, r, g, b, a)
+    r, g, b, a = hex2rgb("#00000000")
+    fill_pattern:add_color_stop_rgba(0.6, r, g, b, a)
+    r, g, b, a = hex2rgb(color)
+    fill_pattern:add_color_stop_rgba(0.7, r, g, b, a)
+    r, g, b, a = hex2rgb(color)
+    fill_pattern:add_color_stop_rgba(1, r, g, b, a)
     return fill_pattern
 end
 
@@ -80,8 +97,7 @@ local function flip(surface, axis)
     cr.source = source_pattern
     cr:rectangle(0, 0, width, height)
     cr:paint()
-    collectgarbage()
-    collectgarbage()
+
     return flipped
 end
 
@@ -135,8 +151,7 @@ local function create_corner_top_left(args)
         width = args.stroke_width_inner,
         source = args.stroke_source_inner,
     }
-    collectgarbage()
-    collectgarbage()
+
     return surface
 end
 
@@ -168,8 +183,7 @@ local function create_edge_top_middle(args)
     add_stroke(
         args.stroke_width_outer, args.stroke_offset_outer,
         args.stroke_color_outer)
-    collectgarbage()
-    collectgarbage()
+
     return surface
 end
 
@@ -196,8 +210,7 @@ local function create_edge_left(args)
     cr.line_width = args.stroke_width_outer -- 1
     cr:set_source_rgb(hex2rgb(args.stroke_color_outer))
     cr:stroke()
-    collectgarbage()
-    collectgarbage()
+
     return surface
 end
 
