@@ -800,14 +800,14 @@ function _private.add_window_decorations(c)
         c:connect_signal(
             "property::maximized", function()
                 if c.maximized then
-                    local curr_screen_geo = client.focus.screen.geometry
+                    local curr_screen_workarea = client.focus.screen.workarea
                     awful.titlebar.hide(c)
                     c.shape = nil
                     c:geometry{
-                        x = 0,
-                        y = 0,
-                        width = curr_screen_geo.width,
-                        height = curr_screen_geo.height,
+                        x = curr_screen_workarea.x,
+                        y = curr_screen_workarea.y,
+                        width = curr_screen_workarea.width,
+                        height = curr_screen_workarea.height,
                     }
                 else
                     awful.titlebar.show(c)
