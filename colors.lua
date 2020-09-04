@@ -7,9 +7,9 @@ local max = math.max
 local min = math.min
 local pow = math.pow
 local random = math.random
--- local debug = require("helpers").debug
 local gcolor = require("gears.color")
 local parse_color = gcolor.parse_color
+
 -- Returns a value that is clipped to interval edges if it falls outside the interval
 local function clip(num, min_num, max_num) return
     max(min(num, max_num), min_num) end
