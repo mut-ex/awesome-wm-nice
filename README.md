@@ -17,7 +17,7 @@ nice is an easy to use, highly configurable extension for **[Awesome WM](https:/
 
 ### Prerequisites 
 
-* You need **[Awesome WM](https://awesomewm.org/)** with a working basic configuration. This branch is for Awesome v4.3 git. [You can find the branch for Awesome v4.3 stable here](https://github.com/mut-ex/awesome-wm-nice/tree/awesome-4v3-stable)**
+* You need **[Awesome WM](https://awesomewm.org/)** with a working basic configuration. **This branch is for Awesome v4.3 git. [You can find the branch for Awesome v4.3 stable here](https://github.com/mut-ex/awesome-wm-nice/tree/awesome-4v3-stable)**
 
 * You also need **[picom](https://github.com/yshui/picom)**. Make sure you have `shadow-ignore-shaped = false` in your configuration otherwise picom will not draw shadows. My recommended shadow settings are given below: 
 

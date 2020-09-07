@@ -781,7 +781,7 @@ function _private.add_window_decorations(c)
         }, "vertical")
     local bottom = awful.titlebar(
                        c, {
-            size = bottom_edge_height,nicee
+            size = bottom_edge_height,
             bg = "transparent",
             position = "bottom",
         })
