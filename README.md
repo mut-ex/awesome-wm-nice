@@ -122,7 +122,7 @@ Below you will find further details explaining the configuration parameters for 
 | `button_margin_left` | integer | The margin to the left of each titlebar button | 0 |
 | `button_margin_right` | integer | The margin to the right of each titlebar button | 0 |
 | `tooltips_enabled` | boolean | If tooltip hints should be shown when the mouse cursor is hovered over a titlebar button | nil |
-| `close_color` | string | The base color for the close button | "#ee4266 |
+| `close_color` | string | The base color for the close button | "#ee4266" |
 | `minimize_color` | string | The base color for the minimize button | "#ffb400" |
 | `maximize_color` | string | The base color for the maximize button | "#4cbb17" |
 | `floating_color` | string | The base color for the floating mode toggle button | "#f6a2ed" |

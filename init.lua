@@ -1,11 +1,12 @@
 -- ============================================================
 local ret, helpers = pcall(require, "helpers")
 local debug = ret and helpers.debug or function() end
-
+local pairs = pairs
 local ipairs = ipairs
 -- > Awesome WM LIBS
 local awful = require("awful")
 local atooltip = awful.tooltip
+local abutton = awful.button
 local wibox = require("wibox")
 local get_font_height = require("beautiful").get_font_height
 -- Widgets
@@ -332,7 +333,7 @@ local function create_titlebar_button(c, name, button_callback, property)
             update()
         end)
     -- The button is updated on both click and release, but the call back is executed on release
-    button_img.buttons = awful.button(
+    button_img.buttons = abutton(
                              {}, nice.MB_LEFT, function()
             event = "press"
             update()
@@ -377,7 +378,7 @@ local function get_titlebar_mouse_bindings(c)
     local clicks = 0
     local tolerance = double_click_jitter_tolerance
     local buttons = {
-        awful.button(
+        abutton(
             {}, _private.mb_move, function()
                 local cx, cy = _G.mouse.coords().x, _G.mouse.coords().y
                 local delta = double_click_time_window_ms / 1000
@@ -401,7 +402,7 @@ local function get_titlebar_mouse_bindings(c)
                 gtimer_weak_start_new(
                     delta, function() clicks = 0 end)
             end),
-        awful.button(
+        abutton(
             {}, _private.mb_contextmenu, function()
 
                 local menu_items = {}
@@ -440,19 +441,19 @@ local function get_titlebar_mouse_bindings(c)
                     }
                 c._nice_right_click_menu:show()
             end),
-        awful.button(
+        abutton(
             {}, _private.mb_resize, function()
                 c:activate{context = "mouse_click", action = "mouse_resize"}
             end),
     }
 
     if _private.window_shade_enabled then
-        buttons[#buttons + 1] = awful.button(
+        buttons[#buttons + 1] = abutton(
                                     {}, _private.mb_win_shade_rollup,
                                     function()
                 _private.shade_roll_up(c)
             end)
-        buttons[#buttons + 1] = awful.button(
+        buttons[#buttons + 1] = abutton(
                                     {}, _private.mb_win_shade_rolldown,
                                     function()
                 _private.shade_roll_down(c)
@@ -701,6 +702,14 @@ function _private.add_window_decorations(c)
         imagebox(corner_top_right_img, false),
         layout = wlayout_align_horizontal,
     }
+
+    local resize_button = {
+        abutton(
+            {}, 1, function()
+                c:activate{context = "mouse_click", action = "mouse_resize"}
+            end),
+    }
+
     -- The left side border
     local left_border_img = create_edge_left {
         client_color = client_color,
@@ -722,14 +731,9 @@ function _private.add_window_decorations(c)
             widget = wcontainer_background,
         })
     left_side_border:setup{
+        buttons = resize_button,
         widget = wcontainer_background,
         bgimage = left_border_img,
-        buttons = {
-            awful.button(
-                {}, 1, function()
-                    c:activate{context = "mouse_click", action = "mouse_resize"}
-                end),
-        },
     }
     local right_side_border = awful.titlebar(
                                   c, {
@@ -741,12 +745,7 @@ function _private.add_window_decorations(c)
     right_side_border:setup{
         widget = wcontainer_background,
         bgimage = right_border_img,
-        buttons = {
-            awful.button(
-                {}, 1, function()
-                    c:activate{context = "mouse_click", action = "mouse_resize"}
-                end),
-        },
+        buttons = resize_button,
     }
     local corner_bottom_left_img = shapes.flip(
                                        create_corner_top_left {
@@ -782,7 +781,7 @@ function _private.add_window_decorations(c)
         }, "vertical")
     local bottom = awful.titlebar(
                        c, {
-            size = bottom_edge_height,
+            size = bottom_edge_height,nicee
             bg = "transparent",
             position = "bottom",
         })
@@ -791,6 +790,7 @@ function _private.add_window_decorations(c)
         {widget = wcontainer_background, bgimage = bottom_edge},
         imagebox(corner_bottom_right_img, false),
         layout = wlayout_align_horizontal,
+        buttons = resize_button,
     }
     if _private.window_shade_enabled then
         add_window_shade(c, titlebar.widget, bottom.widget)
