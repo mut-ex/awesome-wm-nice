@@ -66,7 +66,7 @@ local stroke_outer_top_darken_mul = 0.7
 local title_color_dark = "#242424"
 local title_color_light = "#fefefa"
 local title_unfocused_opacity = 0.7
-local titlebar_gradient_c1_lighten = 1
+local titlebar_gradient_c1_lighten = 2
 local titlebar_gradient_c2_offset = 0.5
 
 local function rel_lighten(lum) return lum * 90 + 10 end
@@ -110,7 +110,7 @@ _private.context_menu_theme = {
     height = 27.5,
     width = 250,
 }
-_private.win_shade_enabled = true
+_private.win_shade_enabled = false
 _private.no_titlebar_maximized = false
 _private.mb_move = nice.MB_LEFT
 _private.mb_contextmenu = nice.MB_MIDDLE
@@ -284,6 +284,7 @@ local function create_button_image(name, is_focused, event, is_on)
     _private[key_img] = shapes.circle_filled(_private[key_color], button_size)
     return _private[key_img]
 end
+local gears = require("gears")
 
 -- Creates a titlebar button widget
 local function create_titlebar_button(c, name, button_callback, property)
@@ -306,7 +307,7 @@ local function create_titlebar_button(c, name, button_callback, property)
     local is_on, is_focused
     local event = "normal"
     local function update()
-        is_focused = c.active
+        is_focused = client.focus == c
         -- If the button is for a property that can be toggled
         if property then
             is_on = c[property]
@@ -332,12 +333,18 @@ local function create_titlebar_button(c, name, button_callback, property)
             event = "normal"
             update()
         end)
-    -- The button is updated on both click and release, but the call back is executed on release
-    button_img.buttons = abutton(
-                             {}, nice.MB_LEFT, function()
+
+    button_img:connect_signal(
+        "button::press", function(_, _, _, mb)
+            if mb ~= nice.MB_LEFT then return end
+
             event = "press"
             update()
-        end, function()
+        end)
+
+    button_img:connect_signal(
+        "button::release", function(_, _, _, mb)
+            if mb ~= nice.MB_LEFT then return end
             if button_callback then
                 event = "normal"
                 button_callback()
@@ -346,7 +353,24 @@ local function create_titlebar_button(c, name, button_callback, property)
             end
             update()
         end)
-    button_img.id = "button_image"
+    local _buttons = abutton {
+        mod = {},
+        _button = nice.MB_LEFT,
+        press = function()
+            --         table.save(m,config_dir .. "/m")
+            event = "press"
+            update()
+        end,
+        release = function()
+            if button_callback then
+                event = "normal"
+                button_callback()
+            else
+                event = "hover"
+            end
+            update()
+        end,
+    }
     update()
     return wibox.widget {
         widget = wcontainer_place,
@@ -370,16 +394,15 @@ local function create_titlebar_button(c, name, button_callback, property)
         },
     }
 end
-
 local function get_titlebar_mouse_bindings(c)
     local client_color = c._nice_base_color
-    local shade_enabled = _private.window_shade_enabled
+    local shade_enabled = _private.win_shade_enabled
     -- Add functionality for double click to (un)maximize, and single click and hold to move
     local clicks = 0
     local tolerance = double_click_jitter_tolerance
-    local buttons = {
-        abutton(
-            {}, _private.mb_move, function()
+    local buttons = gears.table.join(
+                        abutton(
+                            {}, _private.mb_move, function()
                 local cx, cy = _G.mouse.coords().x, _G.mouse.coords().y
                 local delta = double_click_time_window_ms / 1000
                 clicks = clicks + 1
@@ -396,14 +419,15 @@ local function get_titlebar_mouse_bindings(c)
                     if shade_enabled then
                         _private.shade_roll_down(c)
                     end
-                    c:activate{context = "titlebar", action = "mouse_move"}
+                    c:emit_signal(
+                        "request::activate", "mouse_click", {raise = true})
+                    awful.mouse.client.move(c)
                 end
                 -- Start a timer to clear the click count
                 gtimer_weak_start_new(
                     delta, function() clicks = 0 end)
-            end),
-        abutton(
-            {}, _private.mb_contextmenu, function()
+            end), abutton(
+                            {}, _private.mb_contextmenu, function()
 
                 local menu_items = {}
                 local function add_item(text, callback)
@@ -440,24 +464,20 @@ local function get_titlebar_mouse_bindings(c)
                         theme = _private.context_menu_theme,
                     }
                 c._nice_right_click_menu:show()
-            end),
-        abutton(
-            {}, _private.mb_resize, function()
-                c:activate{context = "mouse_click", action = "mouse_resize"}
-            end),
-    }
+            end), abutton(
+                            {}, _private.mb_resize, function()
+                c:emit_signal(
+                    "request::activate", "mouse_click", {raise = true})
+                awful.mouse.client.resize(c)
+            end))
 
-    if _private.window_shade_enabled then
-        buttons[#buttons + 1] = abutton(
-                                    {}, _private.mb_win_shade_rollup,
-                                    function()
-                _private.shade_roll_up(c)
-            end)
-        buttons[#buttons + 1] = abutton(
-                                    {}, _private.mb_win_shade_rolldown,
-                                    function()
-                _private.shade_roll_down(c)
-            end)
+    if _private.win_shade_enabled then
+        buttons = gears.table.join(
+                      buttons, abutton(
+                          {}, _private.mb_win_shade_rollup,
+                          function() _private.shade_roll_up(c) end), abutton(
+                          {}, _private.mb_win_shade_rolldown,
+                          function() _private.shade_roll_down(c) end))
     end
     return buttons
 end
@@ -469,7 +489,7 @@ local function create_titlebar_title(c)
     local title_widget = wibox.widget {
         align = "center",
         ellipsize = "middle",
-        opacity = c.active and 1 or title_unfocused_opacity,
+        opacity = client.focus == c and 1 or title_unfocused_opacity,
         valign = "center",
         widget = textbox,
     }
@@ -552,23 +572,23 @@ local function add_window_shade(c, src_top, src_bottom)
     local geo = c:geometry()
     local w = wibox()
     w.width = geo.width
-    w.background = "transparent"
+    w.height = _private.titlebar_height + bottom_edge_height
     w.x = geo.x
     w.y = geo.y
-    w.height = _private.titlebar_height + 3
-    w.ontop = true
+    w.bg = "transparent"
     w.visible = false
-    w.shape = shapes.rounded_rect {
-        tl = _private.titlebar_radius + 1,
-        tr = _private.titlebar_radius + 1,
-        bl = 4,
-        br = 4,
-    }
+    w.ontop = true
     w.widget = wibox.widget {
-        {src_top, src_bottom, layout = wlayout.fixed.vertical},
-        widget = wcontainer_background,
-        bg = "transparent",
+        src_top,
+        src_bottom,
+        layout = wibox.layout.fixed.vertical,
     }
+    -- type = "normal",
+    -- w.shape = shapes.rounded_rect {
+    --     tl = _private.titlebar_radius ,
+    --     tr = _private.titlebar_radius ,
+    --     bl = 4,
+    --     br = 4,
     c:connect_signal(
         "request::unmanage", function()
             if c._nice_window_shade then
@@ -582,7 +602,7 @@ end
 
 -- Shows the window contents
 function _private.shade_roll_down(c)
-    c:activate()
+    c:emit_signal("request::activate", "mouse_click", {raise = true})
     c._nice_window_shade.visible = false
 end
 
@@ -593,6 +613,9 @@ function _private.shade_roll_up(c)
     w.x = geo.x
     w.y = geo.y
     w.width = geo.width
+
+    -- local ww = w.widget:get_children_by_id("target")[1]
+    -- ww.forced_width = geo.width
     c.minimized = true
     w.visible = true
     w.ontop = true
@@ -698,17 +721,18 @@ function _private.add_window_decorations(c)
             },
             widget = wcontainer_background,
             bgimage = top_edge,
+            -- resize = false,
         },
         imagebox(corner_top_right_img, false),
         layout = wlayout_align_horizontal,
     }
 
-    local resize_button = {
-        abutton(
-            {}, 1, function()
-                c:activate{context = "mouse_click", action = "mouse_resize"}
-            end),
-    }
+    -- local resize_button = {
+    --     abutton(
+    --         {}, 1, function()
+    --             c:activate{context = "mouse_click", action = "mouse_resize"}
+    --         end),
+    -- }
 
     -- The left side border
     local left_border_img = create_edge_left {
@@ -731,9 +755,10 @@ function _private.add_window_decorations(c)
             widget = wcontainer_background,
         })
     left_side_border:setup{
-        buttons = resize_button,
-        widget = wcontainer_background,
-        bgimage = left_border_img,
+        -- buttons = resize_button,
+        widget = imagebox,
+        image = left_border_img,
+        resize = false,
     }
     local right_side_border = awful.titlebar(
                                   c, {
@@ -743,9 +768,10 @@ function _private.add_window_decorations(c)
             widget = wcontainer_background,
         })
     right_side_border:setup{
-        widget = wcontainer_background,
-        bgimage = right_border_img,
-        buttons = resize_button,
+        widget = imagebox,
+        resize = false,
+        image = right_border_img,
+        -- buttons = resize_button,
     }
     local corner_bottom_left_img = shapes.flip(
                                        create_corner_top_left {
@@ -781,19 +807,24 @@ function _private.add_window_decorations(c)
         }, "vertical")
     local bottom = awful.titlebar(
                        c, {
-            size = bottom_edge_height,nicee
+            size = bottom_edge_height,
             bg = "transparent",
             position = "bottom",
         })
+
     bottom:setup{
         imagebox(corner_bottom_left_img, false),
-        {widget = wcontainer_background, bgimage = bottom_edge},
+        -- {
+        imagebox(bottom_edge, false),
+        --     widget = wcontainer_background,
+        --     bgimage = bottom_edge,
+        -- },
         imagebox(corner_bottom_right_img, false),
         layout = wlayout_align_horizontal,
-        buttons = resize_button,
     }
-    if _private.window_shade_enabled then
-        add_window_shade(c, titlebar.widget, bottom.widget)
+
+    if _private.win_shade_enabled then
+        -- add_window_shade(c, titlebar.widget, bottom.widget)
     end
 
     if _private.no_titlebar_maximized then
