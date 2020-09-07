@@ -1,4 +1,7 @@
 # :thumbsup:nice
+
+**N.B. This branch is for Awesome v4.3 git. [You can find the branch for Awesome v4.3 stable here](https://github.com/mut-ex/awesome-wm-nice/tree/awesome-4v3-stable)**
+
 nice is an easy to use, highly configurable extension for **[Awesome WM](https://awesomewm.org/)** that adds beautiful window decorations (and extra functionality!) to clients. It...
 
 * ...adds a **subtle 3D look**, and soft, **rounded anti-aliased, corners** to windows
@@ -14,7 +17,7 @@ nice is an easy to use, highly configurable extension for **[Awesome WM](https:/
 
 ### Prerequisites 
 
-* You need **[Awesome WM](https://awesomewm.org/)** with a working basic configuration. **Currently nice only works on Awesome v4.3 git version**. I am working on support for the stable release
+* You need **[Awesome WM](https://awesomewm.org/)** with a working basic configuration. This branch is for Awesome v4.3 git. [You can find the branch for Awesome v4.3 stable here](https://github.com/mut-ex/awesome-wm-nice/tree/awesome-4v3-stable)**
 
 * You also need **[picom](https://github.com/yshui/picom)**. Make sure you have `shadow-ignore-shaped = false` in your configuration otherwise picom will not draw shadows. My recommended shadow settings are given below: 
 
