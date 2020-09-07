@@ -1,4 +1,6 @@
 # :thumbsup:nice
+**N.B. This branch is for Awesome v4.3 stable. The window shade feature isn't working yet for this version. If you are on Awesome v4.3 git then go to the master branch.**
+
 nice is an easy to use, highly configurable extension for **[Awesome WM](https://awesomewm.org/)** that adds beautiful window decorations (and extra functionality!) to clients. It...
 
 * ...adds a **subtle 3D look**, and soft, **rounded anti-aliased, corners** to windows
@@ -107,7 +109,7 @@ Below you will find further details explaining the configuration parameters for 
 | `titlebar_padding_left` | integer | The padding on the left side of the titlebar | `0`                   |
 | `titlebar_padding_right` | integer | The padding on the right side of the titlebar | `0`                   |
 | `titlebar_font`         | string | The font and font size for text within the titlebar. See the default value for an example of the format | `"Sans 11"`           |
-| `win_shade_enabled`     | boolean | Whether the window shade feature should be enabled | `true`                |
+| ~~`win_shade_enabled`~~ | ~~boolean~~ | ~~Whether the window shade feature should be enabled~~ | ~~`true`~~            |
 | `no_titlebar_maximized` | boolean | Whether the titlebar should be hidden for maximized windows | `false`               |
 | `mb_move`               | integer or named constant | Mouse button to move a window. | `nice.MB_LEFT`        |
 | `mb_contextmenu`        | integer or named constant | Mouse button to open the nice context menu | `nice.MB_MIDDLE`      |
