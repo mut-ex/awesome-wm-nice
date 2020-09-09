@@ -610,6 +610,7 @@ end
 
 -- Shows the window contents
 function _private.shade_roll_down(c)
+    if not c._nice_window_shade_up then return end
     c:geometry{x = c._nice_window_shade.x, y = c._nice_window_shade.y}
     c:activate()
     c._nice_window_shade.visible = false
@@ -619,6 +620,7 @@ end
 
 -- Hides the window contents
 function _private.shade_roll_up(c)
+    if c._nice_window_shade_up then return end
     local w = c._nice_window_shade
     local geo = c:geometry()
     w.x = geo.x
