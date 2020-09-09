@@ -1,9 +1,18 @@
+--[[
+███╗   ██╗██╗ ██████╗███████╗
+████╗  ██║██║██╔════╝██╔════╝
+██╔██╗ ██║██║██║     █████╗
+██║╚██╗██║██║██║     ██╔══╝
+██║ ╚████║██║╚██████╗███████╗
+╚═╝  ╚═══╝╚═╝ ╚═════╝╚══════╝
+Author: mu-tex
+License: MIT
+Repository: https://github.com/mut-ex/awesome-wm-nice
+]] -- ============================================================
+-- local ret, helpers = pcall(require, "helpers")
+-- local debug = ret and helpers.debug or function() end
+-- => Awesome WM
 -- ============================================================
-local ret, helpers = pcall(require, "helpers")
-local debug = ret and helpers.debug or function() end
-local pairs = pairs
-local ipairs = ipairs
--- > Awesome WM LIBS
 local awful = require("awful")
 local atooltip = awful.tooltip
 local abutton = awful.button
@@ -16,6 +25,7 @@ local textbox = wibox.widget.textbox
 local wlayout = wibox.layout
 local wlayout_align_horizontal = wlayout.align.horizontal
 local wlayout_fixed_horizontal = wlayout.fixed.horizontal
+local wlayout_flex_horizontal = wlayout.flex.horizontal
 -- Containers
 local wcontainer = wibox.container
 local wcontainer_background = wcontainer.background
@@ -26,20 +36,32 @@ local wcontainer_place = wcontainer.place
 local gsurface = require("gears.surface")
 local gtimer = require("gears.timer")
 local gtimer_weak_start_new = gtimer.weak_start_new
--- > Math
+-- ------------------------------------------------------------
+
+-- => Math + standard Lua methods
+-- ============================================================
 local math = math
 local max = math.max
 local abs = math.abs
 local rad = math.rad
 local floor = math.floor
--- > LGI
+local pairs = pairs
+local ipairs = ipairs
+
+-- ------------------------------------------------------------
+
+-- => LGI
+-- ============================================================
 local lgi = require("lgi")
 local cairo = lgi.cairo
 local gdk = lgi.Gdk
 local get_default_root_window = gdk.get_default_root_window
 local pixbuf_get_from_surface = gdk.pixbuf_get_from_surface
 local pixbuf_get_from_window = gdk.pixbuf_get_from_window
--- > NICE LIBS
+-- ------------------------------------------------------------
+
+-- => nice
+-- ============================================================
 -- Colors
 local colors = require("nice.colors")
 local color_darken = colors.darken
@@ -52,6 +74,7 @@ local create_corner_top_left = shapes.create_corner_top_left
 local create_edge_left = shapes.create_edge_left
 local create_edge_top_middle = shapes.create_edge_top_middle
 local gradient = shapes.duotone_gradient_vertical
+-- ------------------------------------------------------------
 
 gdk.init({})
 
@@ -373,7 +396,7 @@ end
 
 local function get_titlebar_mouse_bindings(c)
     local client_color = c._nice_base_color
-    local shade_enabled = _private.window_shade_enabled
+    local shade_enabled = _private.win_shade_enabled
     -- Add functionality for double click to (un)maximize, and single click and hold to move
     local clicks = 0
     local tolerance = double_click_jitter_tolerance
@@ -393,10 +416,12 @@ local function get_titlebar_mouse_bindings(c)
                         c.maximized = not c.maximized
                     end
                 else
-                    if shade_enabled then
-                        _private.shade_roll_down(c)
+                    if shade_enabled and c._nice_window_shade_up then
+                        -- _private.shade_roll_down(c)
+                        awful.mouse.wibox.move(c._nice_window_shade)
+                    else
+                        c:activate{context = "titlebar", action = "mouse_move"}
                     end
-                    c:activate{context = "titlebar", action = "mouse_move"}
                 end
                 -- Start a timer to clear the click count
                 gtimer_weak_start_new(
@@ -447,7 +472,7 @@ local function get_titlebar_mouse_bindings(c)
             end),
     }
 
-    if _private.window_shade_enabled then
+    if _private.win_shade_enabled then
         buttons[#buttons + 1] = abutton(
                                     {}, _private.mb_win_shade_rollup,
                                     function()
@@ -494,7 +519,7 @@ local function create_titlebar_title(c)
     local margin_vertical = leftover_space > 1 and leftover_space / 2 or 0
     return {
         title_widget,
-        widget = wibox.container.margin,
+        widget = wcontainer_margin,
         top = margin_vertical,
         bottom = margin_vertical,
     }
@@ -555,35 +580,41 @@ local function add_window_shade(c, src_top, src_bottom)
     w.background = "transparent"
     w.x = geo.x
     w.y = geo.y
-    w.height = _private.titlebar_height + 3
+    w.height = _private.titlebar_height + bottom_edge_height
     w.ontop = true
     w.visible = false
     w.shape = shapes.rounded_rect {
-        tl = _private.titlebar_radius + 1,
-        tr = _private.titlebar_radius + 1,
+        tl = _private.titlebar_radius,
+        tr = _private.titlebar_radius,
         bl = 4,
         br = 4,
     }
-    w.widget = wibox.widget {
-        {src_top, src_bottom, layout = wlayout.fixed.vertical},
-        widget = wcontainer_background,
-        bg = "transparent",
-    }
+    -- Need to use a manual layout because layout fixed seems to introduce a thin gap
+    src_top.point = {x = 0, y = 0}
+    src_top.forced_width = geo.width
+    src_bottom.point = {x = 0, y = _private.titlebar_height}
+    w.widget = {src_top, src_bottom, layout = wlayout.manual}
+    -- Clean up resources when a client is killed
     c:connect_signal(
         "request::unmanage", function()
             if c._nice_window_shade then
                 c._nice_window_shade.visible = false
                 c._nice_window_shade = nil
             end
-
+            -- Clean up
+            collectgarbage("collect")
         end)
+    c._nice_window_shade_up = false
     c._nice_window_shade = w
 end
 
 -- Shows the window contents
 function _private.shade_roll_down(c)
+    c:geometry{x = c._nice_window_shade.x, y = c._nice_window_shade.y}
     c:activate()
     c._nice_window_shade.visible = false
+    c._nice_window_shade_up = false
+
 end
 
 -- Hides the window contents
@@ -596,6 +627,7 @@ function _private.shade_roll_up(c)
     c.minimized = true
     w.visible = true
     w.ontop = true
+    c._nice_window_shade_up = true
 end
 
 -- Toggles the window shade state
@@ -675,7 +707,7 @@ function _private.add_window_decorations(c)
     local titlebar = awful.titlebar(
                          c, {size = titlebar_height, bg = "transparent"})
     -- Arrange the graphics
-    titlebar:setup{
+    titlebar.widget = {
         imagebox(corner_top_left_img, false),
         {
             {
@@ -687,7 +719,7 @@ function _private.add_window_decorations(c)
                 {
                     create_titlebar_items(c, _private.titlebar_items.middle),
                     buttons = get_titlebar_mouse_bindings(c),
-                    layout = wibox.layout.flex.horizontal,
+                    layout = wlayout_flex_horizontal,
                 },
                 {
                     create_titlebar_items(c, _private.titlebar_items.right),
@@ -785,14 +817,16 @@ function _private.add_window_decorations(c)
             bg = "transparent",
             position = "bottom",
         })
-    bottom:setup{
+    bottom.widget = wibox.widget {
         imagebox(corner_bottom_left_img, false),
-        {widget = wcontainer_background, bgimage = bottom_edge},
+        -- {widget = wcontainer_background, bgimage = bottom_edge},
+        imagebox(bottom_edge, false),
+
         imagebox(corner_bottom_right_img, false),
         layout = wlayout_align_horizontal,
         buttons = resize_button,
     }
-    if _private.window_shade_enabled then
+    if _private.win_shade_enabled then
         add_window_shade(c, titlebar.widget, bottom.widget)
     end
 
@@ -821,6 +855,7 @@ function _private.add_window_decorations(c)
                 end
             end)
     end
+
     -- Clean up
     collectgarbage("collect")
 end

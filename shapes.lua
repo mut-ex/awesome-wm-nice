@@ -214,6 +214,35 @@ local function create_edge_left(args)
     return surface
 end
 
+local function set_font(cr, font)
+    cr:set_font_size(font.size)
+    cr:select_font_face(
+        font.font or "Inter", font.italic and 1 or 0, font.bold and 1 or 0)
+end
+
+local function text_label(args)
+    local surface = cairo.ImageSurface.create("ARGB32", 1, 1)
+    local cr = cairo.Context.create(surface)
+    set_font(cr, args.font)
+    local text = args.text
+    local kern = args.font.kerning or 0
+    local ext = cr:text_extents(text)
+    surface = cairo.ImageSurface.create(
+                  "ARGB32", ext.width + string.len(text) * kern, ext.height)
+    cr = cairo.Context.create(surface)
+    set_font(cr, args.font)
+    cr:move_to(0, ext.height)
+    cr:set_source_rgb(hex2rgb(args.color))
+    -- cr:show_text(text)
+    text:gsub(
+        ".", function(c)
+            -- do something with c
+            cr:show_text(c)
+            cr:rel_move_to(kern, 0)
+        end)
+    return surface
+end
+
 return {
     rounded_rect = rounded_rect,
     circle_filled = circle_filled,
@@ -222,4 +251,5 @@ return {
     create_corner_top_left = create_corner_top_left,
     create_edge_top_middle = create_edge_top_middle,
     create_edge_left = create_edge_left,
+    text_label = text_label,
 }
