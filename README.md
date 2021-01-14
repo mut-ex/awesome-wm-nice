@@ -1,5 +1,11 @@
 # :thumbsup:nice
 
+<p align="center">
+If you would like to show your appreciation for this project,<br>please consider a donation :)<br><br>
+<a href="https://www.paypal.com/donate/?business=Y4Y75KP2JBNJW&currency_code=USD">
+<img src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" alt="PayPal donation link"/></a>
+<p>
+
 **N.B. This branch is for Awesome v4.3 git. [You can find the branch for Awesome v4.3 stable here](https://github.com/mut-ex/awesome-wm-nice/tree/awesome-4v3-stable)**
 
 nice is an easy to use, highly configurable extension for **[Awesome WM](https://awesomewm.org/)** that adds beautiful window decorations (and extra functionality!) to clients. It...
