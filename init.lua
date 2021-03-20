@@ -95,7 +95,7 @@ _private.titlebar_margin_left = 0
 _private.titlebar_margin_right = 0
 _private.titlebar_font = "Sans 11"
 _private.titlebar_items = {
-    left = {"close", "minimize", "maximize"},
+    left = {"icon", "close", "minimize", "maximize"},
     middle = "title",
     right = {"sticky", "ontop", "floating"},
 }
@@ -285,6 +285,19 @@ local function create_button_image(name, is_focused, event, is_on)
     return _private[key_img]
 end
 local gears = require("gears")
+
+-- Creates a titlebar icon widget
+local function create_titlebar_icon(c)
+    return wibox.widget {
+        {
+            awful.titlebar.widget.iconwidget(c),
+            valign = "center",
+            layout = wibox.container.place
+        },
+        width = _private.titlebar_height * 0.8,
+        layout = wibox.container.constraint
+    }
+end
 
 -- Creates a titlebar button widget
 local function create_titlebar_button(c, name, button_callback, property)
@@ -522,7 +535,9 @@ end
 
 -- Returns a titlebar item
 local function get_titlebar_item(c, name)
-    if name == "close" then
+    if name == "icon" then
+        return create_titlebar_icon(c)
+    elseif name == "close" then
         return create_titlebar_button(c, name, function() c:kill() end)
     elseif name == "maximize" then
         return create_titlebar_button(
