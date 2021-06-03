@@ -5,7 +5,6 @@ local math = math
 local floor = math.floor
 local max = math.max
 local min = math.min
-local pow = math.pow
 local random = math.random
 local gcolor = require("gears.color")
 local parse_color = gcolor.parse_color
@@ -88,8 +87,7 @@ end
 local function relative_luminance(color)
     local r, g, b = hex2rgb(color)
     local function from_sRGB(u)
-        return u <= 0.0031308 and 25 * u / 323 or
-                   pow(((200 * u + 11) / 211), 12 / 5)
+        return u <= 0.0031308 and 25 * u / 323 or ((200 * u + 11) / 211) ^ (12 / 5)
     end
     return 0.2126 * from_sRGB(r) + 0.7152 * from_sRGB(g) + 0.0722 * from_sRGB(b)
 end
