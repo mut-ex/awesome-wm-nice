@@ -179,10 +179,12 @@ table.save = t.save
 table.load = t.load
 
 -- Load the color rules or create an empty table if there aren't any
-local gfilesys = require("gears.filesystem")
-local config_dir = gfilesys.get_configuration_dir()
-local color_rules_filepath = config_dir .. "/nice/color_rules/" .. _private.color_theme
-_private.color_rules = table.load(color_rules_filepath) or {}
+local function get_color_rules()
+    gfilesys = require("gears.filesystem")
+    config_dir = gfilesys.get_configuration_dir()
+    color_rules_filepath = config_dir .. "/nice/color_rules/" .. _private.color_theme
+    _private.color_rules = table.load(color_rules_filepath) or {}
+end
 
 -- Saves the contents of _private.color_rules table to file
 local function save_color_rules()
@@ -926,6 +928,8 @@ function nice.initialize(args)
     end
 
     validate_mb_bindings()
+    
+    get_color_rules()
 
     _G.client.connect_signal(
         "request::titlebars", function(c)
