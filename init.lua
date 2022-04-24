@@ -168,6 +168,7 @@ _private.maximize_color = "#4CBB17"
 _private.floating_color = "#f6a2ed"
 _private.ontop_color = "#f6a2ed"
 _private.sticky_color = "#f6a2ed"
+_private.color_theme = "default"
 -- ------------------------------------------------------------
 
 -- => Saving and loading of color rules
@@ -180,8 +181,7 @@ table.load = t.load
 -- Load the color rules or create an empty table if there aren't any
 local gfilesys = require("gears.filesystem")
 local config_dir = gfilesys.get_configuration_dir()
-local color_rules_filename = "color_rules"
-local color_rules_filepath = config_dir .. "/nice/" .. color_rules_filename
+local color_rules_filepath = config_dir .. "/nice/color_rules/" .. _private.color_theme
 _private.color_rules = table.load(color_rules_filepath) or {}
 
 -- Saves the contents of _private.color_rules table to file
