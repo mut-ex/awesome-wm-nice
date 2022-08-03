@@ -3,7 +3,7 @@
 -- ============================================================
 --
 local lgi = require("lgi")
-local colors = require("nice.colors")
+local colors = require(tostring(...):match(".*nice") .. ".colors")
 local hex2rgb = colors.hex2rgb
 local darken = colors.darken
 local cairo = lgi.cairo
