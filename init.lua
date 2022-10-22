@@ -181,16 +181,27 @@ _private.color_theme = "default"
 
 -- => Saving and loading of color rules
 -- ============================================================
+local gears = require("gears")
 local table = table
 local t = require(... .. ".table")
 table.save = t.save
 table.load = t.load
+local relative_lua_path = tostring(...)
 
 -- Load the color rules or create an empty table if there aren't any
+-- Credit to: Nooo37
 local function get_color_rules()
-    local gfilesys = require("gears.filesystem")
-    local config_dir = gfilesys.get_configuration_dir()
-    color_rules_filepath = ... .. "/color_rules/" .. _private.color_theme
+    local relative_rules_path = relative_lua_path
+    	:match("^.*nice"):gsub("%.", "/")
+    	.. "/color_rules/"
+    
+    for p in package.path:gmatch('([^;]+)') do
+	    p = p:gsub("?.*", "")
+	    local absolute_rules_path = p .. relative_rules_path
+	    if gears.filesystem.is_dir(absolute_rules_path) then
+		    color_rules_filepath = absolute_rules_path .. _private.color_theme
+	    end
+    end
     _private.color_rules = table.load(color_rules_filepath) or {}
 end
 
@@ -888,13 +899,6 @@ function _private.add_window_decorations(c)
                     }
                 else
                     awful.titlebar.show(c)
-                    -- Shape the client
-                    c.shape = shapes.rounded_rect {
-                        tl = _private.titlebar_radius,
-                        tr = _private.titlebar_radius,
-                        bl = 4,
-                        br = 4,
-                    }
                 end
             end)
     end
@@ -997,13 +1001,6 @@ function nice.initialize(args)
                 c:connect_signal(
                     "request::activate", c._cb_add_window_decorations)
             end
-            -- Shape the client
-            c.shape = shapes.rounded_rect {
-                tl = _private.titlebar_radius,
-                tr = _private.titlebar_radius,
-                bl = 4,
-                br = 4,
-            }
         end)
 end
 
