@@ -87,6 +87,8 @@ local _private = {}
 _private.max_width = 0
 _private.max_height = 0
 
+_private.tooltip_show_delay = 0.5
+
 -- Titlebar
 _private.titlebar_height = 38
 _private.titlebar_radius = 9
@@ -296,7 +298,7 @@ local function create_titlebar_button(c, name, button_callback, property)
                            (property and
                                (c[property] and "_active" or "_inactive") or "")]
             end,
-            delay_show = 0.5,
+            delay_show = _private.tooltip_show_delay,
             margins_leftright = 12,
             margins_topbottom = 6,
             timeout = 0.25,

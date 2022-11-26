@@ -130,12 +130,13 @@ Below you will find further details explaining the configuration parameters for 
 | `floating_color` | string | The base color for the floating mode toggle button | "#f6a2ed" |
 | `ontop_color` | string | The base color for the on top mode toggle button | "#f6a2ed" |
 | `sticky_color` | string | The base color for the sticky mode toggle  button | "#f6a2ed" |
+| `tooltip_show_delay` | float | The delay in seconds to show the tool tip on button hover  | `0.5` |
 
 In addition to the above mentioned parameters, there some more parameters that require a little more explanation:
 
 ### titlebar_items
 
-`titlebar_items` — Specifies the titlebar items to include	
+`titlebar_items` — Specifies the titlebar items to include
 
 * It should be a table with the following keys:
   * `left` — Specifies the item(s) to place on the left side of the titlebar
