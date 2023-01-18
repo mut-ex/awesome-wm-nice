@@ -1,3 +1,5 @@
+# this fork has been archived because i stopped using nice. go make your own titlebars, nice sucks.
+
 # :thumbsup:nice
 
 <p align="center">
