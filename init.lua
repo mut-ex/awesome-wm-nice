@@ -48,20 +48,50 @@ local floor = math.floor
 local pairs = pairs
 local ipairs = ipairs
 
--- ------------------------------------------------------------
+-- Required libraries
+local io = require("io")
+local os = require("os")
 
--- => LGI
--- ============================================================
-local lgi = require("lgi")
-local cairo = lgi.cairo
-local gdk = lgi.Gdk
-local get_default_root_window = gdk.get_default_root_window
-local pixbuf_get_from_surface = gdk.pixbuf_get_from_surface
-local pixbuf_get_from_window = gdk.pixbuf_get_from_window
--- ------------------------------------------------------------
+-- Function to take a screenshot and get the color of a pixel
+function get_pixel_at_screen(x, y, at_window)
+  -- Function to execute a shell command and retrieve the output
+  local function execute_command(command)
+    local handle = io.popen(command)
+    local output = handle:read("*a")
+    handle:close()
+    return output
+  end
 
--- => nice
--- ============================================================
+  -- Take a screenshot using scrot
+  local screenshotFile = ".screenshot.png"
+  local colorCommand
+  if at_window then
+    execute_command("scrot -u " .. screenshotFile)
+    colorCommand = string.format("convert %s -format '%%[pixel:u]' -geometry +0+0 -crop 1x1+%d+%d txt:-", screenshotFile, x, y)
+else
+    execute_command("scrot -a " .. x .. "," .. y .. ",1,1 " .. screenshotFile)
+    colorCommand = string.format("convert %s -format '%%[pixel:u]' -geometry +0+0 -crop 1x1+0+0 txt:-", screenshotFile, x, y)
+  end
+
+  -- Load the color of a pixel from the screenshot
+  local colorOutput = execute_command(colorCommand)
+
+  -- Parse the color value from the output
+  local colorValue = colorOutput:match("#%x%x%x%x%x%x")
+
+  -- Cleanup: Delete the screenshot file
+  os.remove(screenshotFile)
+
+  return colorValue
+end
+
+function get_pixel_at(x, y)
+  return get_pixel_at_screen(x, y, false)
+end
+
+function get_pixel_at_focused_windows(x, y)
+  return get_pixel_at_screen(x, y, true)
+end
 -- Colors
 local colors = require("nice.colors")
 local color_darken = colors.darken
@@ -75,8 +105,6 @@ local create_edge_left = shapes.create_edge_left
 local create_edge_top_middle = shapes.create_edge_top_middle
 local gradient = shapes.duotone_gradient_vertical
 -- ------------------------------------------------------------
-
-gdk.init({})
 
 -- => Local settings
 -- ============================================================
@@ -199,57 +227,15 @@ end
 local function get_color_rule(c) return _private.color_rules[c.instance] end
 -- ------------------------------------------------------------
 
--- Returns the hex color for the pixel at the given coordinates on the screen
-local function get_pixel_at(x, y)
-    local pixbuf = pixbuf_get_from_window(get_default_root_window(), x, y, 1, 1)
-    local bytes = pixbuf:get_pixels()
-    return "#" ..
-               bytes:gsub(
-                   ".", function(c) return ("%02x"):format(c:byte()) end)
-end
-
 -- Determines the dominant color of the client's top region
 local function get_dominant_color(client)
-    local color
-    -- gsurface(client.content):write_to_png(
-    --     "/home/mutex/nice/" .. client.class .. "_" .. client.instance .. ".png")
-    local pb
-    local bytes
-    local tally = {}
-    local content = gsurface(client.content)
-    local cgeo = client:geometry()
-    local x_offset = 2
-    local y_offset = 2
-    local x_lim = floor(cgeo.width / 2)
-    for x_pos = 0, x_lim, 2 do
-        for y_pos = 0, 8, 1 do
-            pb = pixbuf_get_from_surface(
-                     content, x_offset + x_pos, y_offset + y_pos, 1, 1)
-            bytes = pb:get_pixels()
-            color = "#" ..
-                        bytes:gsub(
-                            ".",
-                            function(c)
-                        return ("%02x"):format(c:byte())
-                    end)
-            if not tally[color] then
-                tally[color] = 1
-            else
-                tally[color] = tally[color] + 1
-            end
-        end
-    end
-    local mode
-    local mode_c = 0
-    for kolor, kount in pairs(tally) do
-        if kount > mode_c then
-            mode_c = kount
-            mode = kolor
-        end
-    end
-    color = mode
+    local color = get_pixel_at_focused_windows(2, 2)
     set_color_rule(client, color)
     return color
+end
+
+local function get_default_color(client)
+    return _private.titlebar_color
 end
 
 -- Returns a color that is analogous to the last color returned
@@ -437,7 +423,7 @@ local function get_titlebar_mouse_bindings(c)
                 -- TODO: Add client control options as menu entries for options that haven't had their buttons added
                 add_item(
                     "Redo Window Decorations", function()
-                        c._nice_base_color = get_dominant_color(c)
+                        c._nice_base_color = get_default_color(c)
                         set_color_rule(c, c._nice_base_color)
                         _private.add_window_decorations(c)
                     end)
@@ -655,12 +641,12 @@ function _private.add_window_decorations(c)
     local stroke_color_inner_top = lighten(lighten_amount)
     local stroke_color_inner_sides = lighten(
 
-                                        
+
                                              lighten_amount *
                                                  stroke_inner_sides_lighten_mul)
     local stroke_color_inner_bottom = lighten(
 
-                                         
+
                                               lighten_amount *
                                                   stroke_inner_bottom_lighten_mul)
     -- Outer strokes
@@ -893,7 +879,7 @@ local function validate_mb_bindings()
             else
                 error(
 
-                   
+
                         ("%s and %s can not be bound to the same mouse button"):format(
                             action_mb, mb_conflict_test))
             end
@@ -929,7 +915,7 @@ function nice.initialize(args)
 
     _G.client.connect_signal(
         "request::titlebars", function(c)
-            -- Callback 
+            -- Callback
             c._cb_add_window_decorations =
                 function()
                     gtimer_weak_start_new(
