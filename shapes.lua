@@ -3,7 +3,7 @@
 -- ============================================================
 --
 local lgi = require("lgi")
-local colors = require("nice.colors")
+local colors = require("modules.nice.colors")
 local hex2rgb = colors.hex2rgb
 local darken = colors.darken
 local cairo = lgi.cairo
@@ -29,11 +29,20 @@ local function rounded_rect(args)
 end
 
 -- Returns a circle of the specified size filled with the specified color
-local function circle_filled(color, size)
+local function circle_filled(color, size, shape)
     color = color or "#fefefa"
+    shape = shape or "circle"
     local surface = cairo.ImageSurface.create("ARGB32", size, size)
     local cr = cairo.Context.create(surface)
-    cr:arc(size / 2, size / 2, size / 2, rad(0), rad(360))
+    if shape == "diamond" then
+    	cr:move_to(size / 2, 0)
+    	cr:line_to(size, size / 2)
+    	cr:line_to(size / 2, size)
+    	cr:line_to(0, size / 2)
+	cr:close_path()
+    elseif shape == "circle" then
+   	cr:arc(size / 2, size / 2, size / 2, rad(0), rad(360)) 
+    end
     cr:set_source_rgba(hex2rgb(color))
     cr.antialias = cairo.Antialias.BEST
     cr:fill()
@@ -119,38 +128,6 @@ local function create_corner_top_left(args)
     cr.source = args.background_source
     cr.antialias = cairo.Antialias.BEST
     cr:fill()
-    -- Next add the subtle 3D look
-    local function add_stroke(nargs)
-        local arc_radius = nargs.radius
-        local offset_x = nargs.offset_x
-        local offset_y = nargs.offset_y
-        cr:new_sub_path()
-        cr:move_to(offset_x, height)
-        cr:line_to(offset_x, arc_radius + offset_y)
-        cr:arc(
-            arc_radius + offset_x, arc_radius + offset_y, arc_radius, rad(180),
-            rad(270))
-        cr.source = nargs.source
-        cr.line_width = nargs.width
-        cr.antialias = cairo.Antialias.BEST
-        cr:stroke()
-    end
-    -- Outer dark stroke
-    add_stroke {
-        offset_x = args.stroke_offset_outer,
-        offset_y = args.stroke_offset_outer,
-        radius = radius + 0.5,
-        source = args.stroke_source_outer,
-        width = args.stroke_width_outer,
-    }
-    -- Inner light stroke
-    add_stroke {
-        offset_x = args.stroke_offset_inner,
-        offset_y = args.stroke_offset_inner,
-        radius = radius,
-        width = args.stroke_width_inner,
-        source = args.stroke_source_inner,
-    }
 
     return surface
 end
@@ -166,23 +143,6 @@ local function create_edge_top_middle(args)
     cr:rectangle(0, 0, width, height)
     cr.source = args.background_source
     cr:fill()
-    -- Then add the light and dark strokes for that 3D look
-    local function add_stroke(stroke_width, stroke_offset, stroke_color)
-        cr:new_sub_path()
-        cr:move_to(0, stroke_offset)
-        cr:line_to(width, stroke_offset)
-        cr.line_width = stroke_width
-        cr:set_source_rgb(hex2rgb(stroke_color))
-        cr:stroke()
-    end
-    -- Inner light stroke
-    add_stroke(
-        args.stroke_width_inner, args.stroke_offset_inner,
-        args.stroke_color_inner)
-    -- Outer dark stroke
-    add_stroke(
-        args.stroke_width_outer, args.stroke_offset_outer,
-        args.stroke_color_outer)
 
     return surface
 end

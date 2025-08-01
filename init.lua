@@ -18,9 +18,11 @@ local atooltip = awful.tooltip
 local abutton = awful.button
 local wibox = require("wibox")
 local get_font_height = require("beautiful").get_font_height
+local beautiful = require("beautiful")
 -- Widgets
 local imagebox = wibox.widget.imagebox
 local textbox = wibox.widget.textbox
+local clienticon = awful.widget.clienticon
 -- Layouts
 local wlayout = wibox.layout
 local wlayout_align_horizontal = wlayout.align.horizontal
@@ -63,13 +65,13 @@ local pixbuf_get_from_window = gdk.pixbuf_get_from_window
 -- => nice
 -- ============================================================
 -- Colors
-local colors = require("nice.colors")
+local colors = require(... .. ".colors")
 local color_darken = colors.darken
 local color_lighten = colors.lighten
 local is_contrast_acceptable = colors.is_contrast_acceptable
 local relative_luminance = colors.relative_luminance
 -- Shapes
-local shapes = require("nice.shapes")
+local shapes = require(... .. ".shapes")
 local create_corner_top_left = shapes.create_corner_top_left
 local create_edge_left = shapes.create_edge_left
 local create_edge_top_middle = shapes.create_edge_top_middle
@@ -122,14 +124,15 @@ _private.titlebar_items = {
     middle = "title",
     right = {"sticky", "ontop", "floating"},
 }
+_private.color_theme = "default"
 _private.context_menu_theme = {
-    bg_focus = "#aed9e0",
-    bg_normal = "#5e6472",
+    bg_focus = beautiful.accentalt,
+    bg_normal = beautiful.lbg,
     border_color = "#00000000",
     border_width = 0,
-    fg_focus = "#242424",
-    fg_normal = "#fefefa",
-    font = "Sans 11",
+    fg_focus = beautiful.bg,
+    fg_normal = beautiful.fg,
+    font = beautiful.font,
     height = 27.5,
     width = 250,
 }
@@ -143,12 +146,17 @@ _private.mb_win_shade_rolldown = nice.MB_SCROLL_DOWN
 
 -- Titlebar Items
 _private.button_size = 16
+_private.button_shape = "circle"
+_private.icon_size = 24
 _private.button_margin_horizontal = 5
 -- _private.button_margin_vertical
 _private.button_margin_top = 2
 -- _private.button_margin_bottom = 0
 -- _private.button_margin_left = 0
 -- _private.button_margin_right = 0
+_private.icon_margin = 5
+-- _private.icon_margin_left = 0
+-- _private.icon_margin_right = 0
 _private.tooltips_enabled = true
 _private.tooltip_messages = {
     close = "close",
@@ -168,21 +176,34 @@ _private.maximize_color = "#4CBB17"
 _private.floating_color = "#f6a2ed"
 _private.ontop_color = "#f6a2ed"
 _private.sticky_color = "#f6a2ed"
+_private.color_theme = "default"
 -- ------------------------------------------------------------
 
 -- => Saving and loading of color rules
 -- ============================================================
+local gears = require("gears")
 local table = table
-local t = require("nice.table")
+local t = require(... .. ".table")
 table.save = t.save
 table.load = t.load
+local relative_lua_path = tostring(...)
 
 -- Load the color rules or create an empty table if there aren't any
-local gfilesys = require("gears.filesystem")
-local config_dir = gfilesys.get_configuration_dir()
-local color_rules_filename = "color_rules"
-local color_rules_filepath = config_dir .. "/nice/" .. color_rules_filename
-_private.color_rules = table.load(color_rules_filepath) or {}
+-- Credit to: Nooo37
+local function get_color_rules()
+    local relative_rules_path = relative_lua_path
+    	:match("^.*nice"):gsub("%.", "/")
+    	.. "/color_rules/"
+    
+    for p in package.path:gmatch('([^;]+)') do
+	    p = p:gsub("?.*", "")
+	    local absolute_rules_path = p .. relative_rules_path
+	    if gears.filesystem.is_dir(absolute_rules_path) then
+		    color_rules_filepath = absolute_rules_path .. _private.color_theme
+	    end
+    end
+    _private.color_rules = table.load(color_rules_filepath) or {}
+end
 
 -- Saves the contents of _private.color_rules table to file
 local function save_color_rules()
@@ -304,7 +325,7 @@ local function create_button_image(name, is_focused, event, is_on)
     --                             _private.button_border_width) or
     --                         shapes.circle_filled(
     --                             _private[key_color], button_size)
-    _private[key_img] = shapes.circle_filled(_private[key_color], button_size)
+    _private[key_img] = shapes.circle_filled(_private[key_color], button_size, _private.button_shape)
     return _private[key_img]
 end
 
@@ -522,6 +543,33 @@ local function create_titlebar_title(c)
         widget = wcontainer_margin,
         top = margin_vertical,
         bottom = margin_vertical,
+        left = _private.icon_margin_left or _private.icon_margin,
+        right = _private.icon_margin_right or _private.icon_margin,
+    }
+end
+
+-- Returns a titlebar icon widget for the given client
+local function create_titlebar_icon(c)
+
+    local icon_widget = wibox.widget {
+        opacity = c.active and 1 or title_unfocused_opacity,
+	widget = clienticon,
+	forced_height = _private.icon_size,
+	client = c
+    }
+
+    c:connect_signal(
+        "unfocus", function()
+            icon_widget.opacity = title_unfocused_opacity
+        end)
+    c:connect_signal("focus", function() icon_widget.opacity = 1 end)
+    local leftover_space = _private.titlebar_height - _private.icon_size
+    local margin_vertical = leftover_space > 1 and leftover_space / 2 or 0
+    return {
+        icon_widget,
+        widget = wcontainer_margin,
+        top = margin_vertical,
+        bottom = margin_vertical,
     }
 end
 
@@ -553,6 +601,8 @@ local function get_titlebar_item(c, name)
             end, "sticky")
     elseif name == "title" then
         return create_titlebar_title(c)
+    elseif name == "icon" then
+	return create_titlebar_icon(c)
     end
 end
 
@@ -721,7 +771,9 @@ function _private.add_window_decorations(c)
                 {
                     create_titlebar_items(c, _private.titlebar_items.middle),
                     buttons = get_titlebar_mouse_bindings(c),
-                    layout = wlayout_flex_horizontal,
+		    widget = wibox.container.place,
+		    halign = "center",
+		    valign = "center",
                 },
                 {
                     create_titlebar_items(c, _private.titlebar_items.right),
@@ -847,13 +899,6 @@ function _private.add_window_decorations(c)
                     }
                 else
                     awful.titlebar.show(c)
-                    -- Shape the client
-                    c.shape = shapes.rounded_rect {
-                        tl = _private.titlebar_radius,
-                        tr = _private.titlebar_radius,
-                        bl = 4,
-                        br = 4,
-                    }
                 end
             end)
     end
@@ -916,9 +961,6 @@ function nice.initialize(args)
         for prop, value in pairs(args) do
             if table_args[prop] == true then
                 crush(_private[prop], value)
-            elseif prop == "titlebar_radius" then
-                value = max(3, value)
-                _private[prop] = value
             else
                 _private[prop] = value
             end
@@ -926,6 +968,8 @@ function nice.initialize(args)
     end
 
     validate_mb_bindings()
+    
+    get_color_rules()
 
     _G.client.connect_signal(
         "request::titlebars", function(c)
@@ -957,13 +1001,6 @@ function nice.initialize(args)
                 c:connect_signal(
                     "request::activate", c._cb_add_window_decorations)
             end
-            -- Shape the client
-            c.shape = shapes.rounded_rect {
-                tl = _private.titlebar_radius,
-                tr = _private.titlebar_radius,
-                bl = 4,
-                br = 4,
-            }
         end)
 end
 

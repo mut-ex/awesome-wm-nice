@@ -80,6 +80,7 @@ end
 local function load(sfile)
     local ftables, err = loadfile(sfile)
     if err then return _, err end
+    if ftables() == nil then return nil end
     local tables = ftables()
     for idx = 1, #tables do
         local tolinki = {}
